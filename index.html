@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Progress Bars Demo</title>
+    <script src="https://unpkg.com/react@latest/dist/react.js"></script>
+    <script src="https://unpkg.com/react-dom@latest/dist/react-dom.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/latest/css/bootstrap-theme.min.css">
+
+    <style>
+        [class*='col-'] {
+            padding-right:5px;
+            padding-left:5px;
+        }
+        .row {
+            margin-right: -5px;
+            margin-left: -5px;
+        }
+        .space{
+            padding-top: 30px;
+            padding-bottom: 30px;
+        }
+        button{
+            width: 100%;
+        }
+        .selected{
+            border: solid 1px yellow;
+        }
+        h1{
+            margin: 15px 0 20px;
+            text-align: center;
+            font-size: 2em;
+        }
+        .progress{
+            height: 34px;
+        }
+        .progress-bar{
+            line-height: 33px;
+            font-size: 15px;
+        }
+        @media (min-width: 480px){
+            .container{
+                width:479px;
+            }
+        }
+    </style>
+
+</head>
+<body>
+
+<div class="container space">
+    <h1>Progress Bars Demo</h1>
+    <div id="app" class="row"></div>
+</div>
+
+
+
+<script type="text/babel">
+
+    class Layout extends React.Component {
+        constructor(){
+            super();
+            this.state = {
+                bars: [],
+                buttons: [],
+                limit:null,
+                selectedProgressBar: 1,
+                value:1
+            };
+            this.handleChange = this.handleChange.bind(this);
+            this.handleClick = this.handleClick.bind(this);
+        }
+
+        componentDidMount() {
+            $.get('http://frontend-exercise.apps.staging.digital.gov.au/bars', function (result) {
+                this.setState({
+                    bars: result.bars,
+                    buttons: result.buttons,
+                    limit: result.limit
+                });
+            }.bind(this));
+        }
+
+        getBars(){
+            return this.state.bars;
+        }
+
+        getButtons(){
+            return this.state.buttons;
+        }
+
+        getLimit(){
+            return this.state.limit;
+        }
+
+        renderDropDown() {
+            const bars = this.getBars(),
+                  j = bars.length,
+                  options = [];
+
+            for (let i = 1; i <= j; i++) {
+                options.push(<option value={i} key={i}>#progress{i}</option>);
+            }
+
+            return (
+                <div className="col-xs-5">
+                    <select value={this.state.value} onChange={this.handleChange} className="form-control">
+                        {options}
+                    </select>
+                </div>
+            );
+        }
+
+        handleChange(e){
+            this.setState({value: e.target.value});
+            let barId = e.target.value;
+
+            $('.progress').removeClass('selected');
+            $('#progressbar-'+ barId).addClass('selected');
+        }
+
+        renderButtons(){
+            const btns = this.getButtons(),
+                  buttons = [],
+                  _this = this
+
+            {btns.map(function(val, i){
+                buttons.push(<div className="col-xs-3"><button type="button" className="btn btn-default btn-sm" value={val} onClick={_this.handleClick} key={i}>{val}</button></div>);
+            })}
+
+            return (
+                <div className="col-xs-7">
+                    <div className="row">
+                        {buttons}
+                    </div>
+                </div>
+            )
+        }
+
+        handleClick(e){
+            let dropDownVal = parseInt( $(e.target).attr("value"), 10),
+                barVal =  parseInt( $('.selected').find('span').text(), 10);
+
+                // The bar will expand until the added value of the bar and the button is less than the limit.
+                if ( barVal <= this.state.limit && barVal >= 0 && barVal + dropDownVal < this.state.limit && barVal + dropDownVal >= 0 ){
+                    barVal = barVal + dropDownVal;
+
+                    if(barVal >=  100){
+                        $('.selected').find('.progress-bar').addClass('progress-bar-danger')
+                    } else {
+                        $('.selected').find('.progress-bar').removeClass('progress-bar-danger')
+                    }
+                }
+
+                $('.selected').find('span').text(barVal);
+                $('.selected').find('.progress-bar').attr('style', 'width:' + barVal + '%')
+
+        }
+
+
+        renderProgressBars(){
+            const bars = this.getBars(),
+                  barsElements = [],
+                  _this = this;
+
+            let   addedClass = '';
+
+            {bars.map(function(bar, i){
+                i++;
+
+                addedClass = _this.state.selectedProgressBar === i  ? 'selected' : '';
+
+                barsElements.push(
+                    <div className={"progress " + addedClass} id={"progressbar-" + i }>
+                        <div className="progress-bar progress-bar-success" key={ i } style={{width:bar + "%"}}>
+                            <span>{bar}</span> <small>%</small>
+                        </div>
+                    </div>
+                );
+            })}
+
+            return (
+                <div className="col-xs-12">
+                    {barsElements}
+                </div>
+            )
+        }
+
+        render(){
+            return(
+                <div>
+                    {this.renderProgressBars()}
+                    {this.renderDropDown()}
+                    {this.renderButtons()}
+                </div>
+            )
+        }
+    }
+
+    const app = document.getElementById('app');
+
+    ReactDOM.render(<Layout />,  app);
+
+
+</script>
+</body>
+</html>
